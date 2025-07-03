@@ -14,9 +14,43 @@
         button:disabled { background-color: #ccc; }
         input { padding: 8px; border: 1px solid #ccc; border-radius: 5px; margin-right: 8px; }
         .loading { text-align: center; padding: 2em; }
+    /* ▼▼▼ ローディング画面のスタイルを追加 ▼▼▼ */
+    #loader-wrapper {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        color: white;
+        font-weight: bold;
+    }
+    .loader {
+        border: 8px solid #f3f3f3;
+        border-top: 8px solid #00B900;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    /* ▲▲▲ 追加ここまで ▲▲▲ */
     </style>
 </head>
 <body>
+  <div id="loader-wrapper" style="display: none;">
+      <div class="loader"></div>
+      <p>処理中...</p>
+  </div>
 
 <div class="container">
     <h2>施設利用クーポン管理</h2>
@@ -32,7 +66,7 @@
     </div>
 
     <div id="children-list">
-        </div>
+    </div>
 </div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -168,26 +202,36 @@
     }
 
     // GASにPOSTリクエストを送る共通関数
-    async function postToGas(payload) {
-        document.getElementById('loading').style.display = 'block';
-        try {
-            const response = await fetch(GAS_WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors', // GAS WebAppではCORSエラー回避のために必要になる場合がある
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // GASの仕様
-                body: JSON.stringify(payload)
-            });
-            // no-corsモードではレスポンスボディを読めないため、リフレッシュして結果を反映
-            // 簡単にするため、成功したと仮定してメッセージを返す
-            return { success: true, message: "処理をリクエストしました。画面を更新します。" };
-        } catch (error) {
-            console.error('Fetch error:', error);
-            return { success: false, message: '通信エラーが発生しました。' };
-        } finally {
-             // 処理が終わったら再描画
-             setTimeout(() => fetchAndRenderChildren(), 1000); // GASの処理反映を待つ
+async function postToGas(payload) {
+    const loader = document.getElementById('loader-wrapper');
+    loader.style.display = 'flex'; // ローディング画面を表示
+
+    try {
+        const response = await fetch(GAS_WEB_APP_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            // サーバーからのエラーレスポンスを処理
+            throw new Error(`サーバーエラー: ${response.status}`);
         }
+        
+        // GASからの応答をJSONとして解析して返す
+        return await response.json();
+
+    } catch (error) {
+        console.error('Fetch error:', error);
+        // エラーが発生した場合は、失敗を示すオブジェクトを返す
+        return { success: false, message: `通信エラーが発生しました: ${error.message}` };
+    } finally {
+        // 成功・失敗にかかわらず、必ずローディング画面を非表示にする
+        loader.style.display = 'none';
     }
+}
 
     main();
 </script>
