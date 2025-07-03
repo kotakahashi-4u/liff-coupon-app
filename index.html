@@ -201,7 +201,7 @@
         }
     }
 
-    // GASにPOSTリクエストを送る共通関数
+// GASにPOSTリクエストを送る共通関数
 async function postToGas(payload) {
     const loader = document.getElementById('loader-wrapper');
     loader.style.display = 'flex'; // ローディング画面を表示
@@ -210,25 +210,22 @@ async function postToGas(payload) {
         const response = await fetch(GAS_WEB_APP_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                // ▼▼▼ ここを 'text/plain' に変更するのがポイント ▼▼▼
+                'Content-Type': 'text/plain;charset=utf-8',
             },
             body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
-            // サーバーからのエラーレスポンスを処理
             throw new Error(`サーバーエラー: ${response.status}`);
         }
         
-        // GASからの応答をJSONとして解析して返す
         return await response.json();
 
     } catch (error) {
         console.error('Fetch error:', error);
-        // エラーが発生した場合は、失敗を示すオブジェクトを返す
         return { success: false, message: `通信エラーが発生しました: ${error.message}` };
     } finally {
-        // 成功・失敗にかかわらず、必ずローディング画面を非表示にする
         loader.style.display = 'none';
     }
 }
