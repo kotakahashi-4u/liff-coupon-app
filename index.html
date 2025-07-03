@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>施設利用クーポン</title>
+    <style>
+        body { font-family: sans-serif; padding: 1em; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .card { background-color: white; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .child-info { display: flex; justify-content: space-between; align-items: center; }
+        h2, h3 { border-bottom: 2px solid #00B900; padding-bottom: 8px; color: #333; }
+        button { background-color: #00B900; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:disabled { background-color: #ccc; }
+        input { padding: 8px; border: 1px solid #ccc; border-radius: 5px; margin-right: 8px; }
+        .loading { text-align: center; padding: 2em; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>施設利用クーポン管理</h2>
+    <p id="user-name" class="card">LINEユーザー情報取得中...</p>
+    
+    <div id="loading" class="loading">読み込み中...</div>
+
+    <div id="register-child" class="card" style="display:none;">
+        <h3>お子様を登録</h3>
+        <input type="text" id="child-name" placeholder="お子様の名前">
+        <button onclick="registerChild()">登録する</button>
+        <p>※最大5名まで登録できます</p>
+    </div>
+
+    <div id="children-list">
+        </div>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+    // --- 設定値 ---
+    const LIFF_ID = "YOUR_LIFF_ID"; // ★ ステップ4で取得するLIFF IDに書き換える
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx3KaIRyHyDYQvLZcl_-n_crg239ybLV_WbjGyG99-tGIrXK2yfPteWUDMVTq2iQIg-UA/exec"; // ★ ステップ2でコピーしたGASのURLに書き換える
+
+    let lineProfile = null;
+
+    // --- メイン処理 ---
+    async function main() {
+        try {
+            await liff.init({ liffId: LIFF_ID });
+            if (!liff.isLoggedIn()) {
+                liff.login();
+                return;
+            }
+            lineProfile = await liff.getProfile();
+            document.getElementById('user-name').innerText = `${lineProfile.displayName} さん`;
+            
+            await fetchAndRenderChildren();
+
+        } catch (error) {
+            console.error(error);
+            document.getElementById('user-name').innerText = "アプリの読み込みに失敗しました。";
+        } finally {
+            document.getElementById('loading').style.display = 'none';
+        }
+    }
+
+    // --- データ取得と画面描画 ---
+    async function fetchAndRenderChildren() {
+        if (!lineProfile) return;
+
+        // GASから子供のデータを取得
+        const response = await fetch(`${GAS_WEB_APP_URL}?userId=${lineProfile.userId}`);
+        const data = await response.json();
+        const children = data.children || [];
+
+        // UIを更新
+        const registerSection = document.getElementById('register-child');
+        registerSection.style.display = (children.length < 5) ? 'block' : 'none';
+
+        const childrenList = document.getElementById('children-list');
+        childrenList.innerHTML = '<h3>登録済みのお子様</h3>'; // 見出しを再追加
+        if (children.length === 0) {
+            childrenList.innerHTML += '<p>まだお子様が登録されていません。</p>';
+        } else {
+            children.forEach(child => {
+                const childElement = document.createElement('div');
+                childElement.className = 'card';
+                childElement.innerHTML = `
+                    <div class="child-info">
+                        <h4>${child.childName}</h4>
+                        <p><strong>残り時間: ${Number(child.remainingHours).toFixed(1)} 時間</strong></p>
+                    </div>
+                    <div>
+                        <input type="number" id="hours-${child.childId}" min="0.5" step="0.5" style="width: 80px;" placeholder="利用時間">
+                        <button onclick="useHours('${child.childId}')">利用する</button>
+                    </div>
+                `;
+                childrenList.appendChild(childElement);
+            });
+        }
+    }
+
+    // --- API呼び出し関数 ---
+
+    // 子供を登録する
+    async function registerChild() {
+        const childNameInput = document.getElementById('child-name');
+        const childName = childNameInput.value.trim();
+        if (!childName) {
+            alert('お子様の名前を入力してください。');
+            return;
+        }
+
+        const payload = {
+            action: 'registerChild',
+            data: {
+                lineUserId: lineProfile.userId,
+                lineDisplayName: lineProfile.displayName,
+                childName: childName
+            }
+        };
+
+        const response = await postToGas(payload);
+        alert(response.message);
+        
+        if (response.success) {
+            childNameInput.value = '';
+            fetchAndRenderChildren();
+        }
+    }
+
+    // 時間を利用する
+    async function useHours(childId) {
+        const staffPin = prompt("職員確認のため、パスコードを入力してください:", "");
+        if (staffPin !== "1234") { // サンプル用の固定パスコード
+            if(staffPin !== null) alert("パスコードが違います。");
+            return;
+        }
+
+        const hoursInput = document.getElementById(`hours-${childId}`);
+        const hoursToUse = parseFloat(hoursInput.value);
+        if (isNaN(hoursToUse) || hoursToUse <= 0) {
+            alert('正しい利用時間を入力してください。');
+            return;
+        }
+
+        const payload = {
+            action: 'useHours',
+            data: {
+                lineUserId: lineProfile.userId,
+                childId: childId,
+                hoursToUse: hoursToUse
+            }
+        };
+
+        const response = await postToGas(payload);
+        alert(response.message);
+
+        if (response.success) {
+            fetchAndRenderChildren();
+        }
+    }
+
+    // GASにPOSTリクエストを送る共通関数
+    async function postToGas(payload) {
+        document.getElementById('loading').style.display = 'block';
+        try {
+            const response = await fetch(GAS_WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors', // GAS WebAppではCORSエラー回避のために必要になる場合がある
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // GASの仕様
+                body: JSON.stringify(payload)
+            });
+            // no-corsモードではレスポンスボディを読めないため、リフレッシュして結果を反映
+            // 簡単にするため、成功したと仮定してメッセージを返す
+            return { success: true, message: "処理をリクエストしました。画面を更新します。" };
+        } catch (error) {
+            console.error('Fetch error:', error);
+            return { success: false, message: '通信エラーが発生しました。' };
+        } finally {
+             // 処理が終わったら再描画
+             setTimeout(() => fetchAndRenderChildren(), 1000); // GASの処理反映を待つ
+        }
+    }
+
+    main();
+</script>
+
+</body>
+</html>
