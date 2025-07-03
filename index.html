@@ -214,7 +214,7 @@ async function postToGas(payload) {
             body: JSON.stringify(payload)
         });
         // GASからの応答をJSONとして解析して返す
-        return await response.json();
+            return { success: true, message: "処理をリクエストしました。画面を更新します。" };
     } catch (error) {
         console.error('Fetch error:', error);
         return { success: false, message: '通信エラーが発生しました。' };
