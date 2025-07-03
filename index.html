@@ -73,7 +73,17 @@
         const response = await fetch(`${GAS_WEB_APP_URL}?userId=${lineProfile.userId}`);
         const data = await response.json();
         
-        childrenData = data.children || []; // ▼▼▼ 2. 取得したデータを変数に保存 ▼▼▼
+        // ▼▼▼ 追加 ▼▼▼
+        // dataが正しい形式か確認してから代入する
+        if (data && typeof data === 'object' && 'children' in data) {
+            childrenData = data.children || [];
+        } else {
+            // 予期せぬデータが返ってきた場合
+            console.error("Backend response is not in the correct format:", data);
+            alert("サーバーから正しいデータを取得できませんでした。");
+            childrenData = []; // エラー時は空にする
+        }
+        // ▲▲▲ 追加 ▲▲▲
 
         // UIを更新
         const registerSection = document.getElementById('register-child');
