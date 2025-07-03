@@ -42,6 +42,7 @@
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbx3KaIRyHyDYQvLZcl_-n_crg239ybLV_WbjGyG99-tGIrXK2yfPteWUDMVTq2iQIg-UA/exec"; // ★ ステップ2でコピーしたGASのURLに書き換える
 
     let lineProfile = null;
+    let childrenData = []; // ▼▼▼ 1. 変数を追加 ▼▼▼
 
     // --- メイン処理 ---
     async function main() {
@@ -71,7 +72,8 @@
         // GASから子供のデータを取得
         const response = await fetch(`${GAS_WEB_APP_URL}?userId=${lineProfile.userId}`);
         const data = await response.json();
-        const children = data.children || [];
+        
+        childrenData = data.children || []; // ▼▼▼ 2. 取得したデータを変数に保存 ▼▼▼
 
         // UIを更新
         const registerSection = document.getElementById('register-child');
@@ -133,10 +135,19 @@
     async function useHours(childId) {
         const hoursInput = document.getElementById(`hours-${childId}`);
         const hoursToUse = parseFloat(hoursInput.value);
+
         if (isNaN(hoursToUse) || hoursToUse <= 0) {
             alert('正しい利用時間を入力してください。');
             return;
         }
+
+        // ▼▼▼ 3. 残り時間のチェック処理を追加 ▼▼▼
+        const child = childrenData.find(c => c.childId == childId);
+        if (child && hoursToUse > child.remainingHours) {
+            alert(`残り時間(${Number(child.remainingHours).toFixed(1)}時間)を超えて利用することはできません。`);
+            return;
+        }
+        // ▲▲▲ 3. 追加ここまで ▲▲▲
 
         const payload = {
             action: 'useHours',
