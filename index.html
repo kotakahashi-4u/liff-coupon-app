@@ -207,23 +207,27 @@ async function postToGas(payload) {
     loader.style.display = 'flex'; // ローディング画面を表示
 
     try {
-        const response = await fetch(GAS_WEB_APP_URL, {
+        // CORSエラーを確実に回避するため no-cors モードで実行
+        await fetch(GAS_WEB_APP_URL, {
             method: 'POST',
-            mode: 'no-cors', // GAS WebAppではCORSエラー回避のために必要になる場合がある
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // GASの仕様
+            mode: 'no-cors', // no-corsモード
+            headers: {
+                'Content-Type': 'text/plain;charset=utf-8',
+            },
             body: JSON.stringify(payload)
         });
-        // GASからの応答をJSONとして解析して返す
-            return { success: true, message: "処理をリクエストしました。画面を更新します。" };
+
+        // no-corsモードでは応答を取得できないため、少し待ってから成功したと見なす
+        setTimeout(() => {
+            loader.style.display = 'none'; // ローディング画面を非表示
+            alert("処理をリクエストしました。");
+            fetchAndRenderChildren(); // 画面を再描画
+        }, 2000); // 2秒待ってから画面を更新
+
     } catch (error) {
         console.error('Fetch error:', error);
-        return { success: false, message: '通信エラーが発生しました。' };
-    } finally {
-
-        // 成功・失敗にかかわらず、必ずローディング画面を非表示にする
-        loader.style.display = 'none';
-         // 処理が終わったら再描画
-         setTimeout(() => fetchAndRenderChildren(), 1000); // GASの処理反映を待つ
+        alert(`通信エラーが発生しました: ${error.message}`);
+        loader.style.display = 'none'; // エラー時もローディングを消す
     }
 }
 
