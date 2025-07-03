@@ -157,13 +157,9 @@
             }
         };
 
-        const response = await postToGas(payload);
-        alert(response.message);
-        
-        if (response.success) {
-            childNameInput.value = '';
-            fetchAndRenderChildren();
-        }
+        // postToGasを呼び出すだけにする
+        postToGas(payload); 
+        childNameInput.value = '';
     }
 
     // 時間を利用する
@@ -193,12 +189,8 @@
             }
         };
 
-        const response = await postToGas(payload);
-        alert(response.message);
-
-        if (response.success) {
-            fetchAndRenderChildren();
-        }
+        // postToGasを呼び出すだけにする
+        postToGas(payload);
     }
 
 // GASにPOSTリクエストを送る共通関数
