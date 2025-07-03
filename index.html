@@ -131,12 +131,6 @@
 
     // 時間を利用する
     async function useHours(childId) {
-        const staffPin = prompt("職員確認のため、パスコードを入力してください:", "");
-        if (staffPin !== "1234") { // サンプル用の固定パスコード
-            if(staffPin !== null) alert("パスコードが違います。");
-            return;
-        }
-
         const hoursInput = document.getElementById(`hours-${childId}`);
         const hoursToUse = parseFloat(hoursInput.value);
         if (isNaN(hoursToUse) || hoursToUse <= 0) {
