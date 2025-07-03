@@ -212,7 +212,6 @@ async function postToGas(payload) {
         // no-corsモードでは応答を取得できないため、少し待ってから成功したと見なす
         setTimeout(() => {
             loader.style.display = 'none'; // ローディング画面を非表示
-            alert("処理をリクエストしました。");
             fetchAndRenderChildren(); // 画面を再描画
         }, 2000); // 2秒待ってから画面を更新
 
